@@ -283,6 +283,8 @@ cdef extern from "capnp/dynamic.h" namespace " ::capnp":
             uint64_t getId"getSchema().getProto().getId"()
             Maybe[StructSchema.Field] which()
             MessageSize totalSize()
+            const void *getDataSectionAddr"as< ::capnp::AnyStruct>().getDataSection().begin"()
+            const size_t getDataSectionSize"as< ::capnp::AnyStruct>().getDataSection().size"()
         cppclass Pipeline:
             Pipeline()
             Pipeline(Pipeline &)

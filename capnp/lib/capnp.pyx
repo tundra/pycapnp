@@ -1080,6 +1080,28 @@ cdef class _DynamicStructReader:
                 self._schema = _StructSchema()._init(self.thisptr.getSchema())
             return self._schema
 
+    cpdef _data_section_addr(self):
+        return <uintptr_t>self.thisptr.getDataSectionAddr()
+
+    property data_section_addr:
+        """
+        Returns the memory address within the buffer where this struct resides
+        of the start of the data section.
+        """
+        def __get__(_DynamicStructReader self):
+            return self._data_section_addr()
+
+    cpdef _data_section_size(self):
+        return self.thisptr.getDataSectionSize()
+
+    property data_section_size:
+        """
+        Returns the size in bytes of the data section of this struct within the
+        buffer where it resides.
+        """
+        def __get__(_DynamicStructReader self):
+            return self._data_section_size()
+
     def __dir__(self):
         return list(self.schema.fieldnames)
 
@@ -3010,13 +3032,15 @@ class _StructModule(object):
 
         :rtype: :class:`_DynamicStructReader` or :class:`_DynamicStructBuilder`
         """
+        message = self.message_from_bytes(buf, traversal_limit_in_words, nesting_limit)
         if builder:
             # message = _FlatMessageBuilder(buf)
-            message = _FlatArrayMessageReader(buf, traversal_limit_in_words, nesting_limit)
             return message.get_root(self.schema).as_builder()
         else:
-            message = _FlatArrayMessageReader(buf, traversal_limit_in_words, nesting_limit)
             return message.get_root(self.schema)
+    def message_from_bytes(self, buf, traversal_limit_in_words = None, nesting_limit = None):
+        """Returns a message reader for the object in the given buf."""
+        return _FlatArrayMessageReader(buf, traversal_limit_in_words, nesting_limit)
     def from_segments(self, segments, traversal_limit_in_words = None, nesting_limit = None):
         """Returns a Reader for a list of segment bytes.
 
@@ -3756,6 +3780,9 @@ cdef class _BufferView:
 @cython.internal
 cdef class _FlatArrayMessageReader(_MessageReader):
     cdef object _object_to_pin
+    cdef void *_buffer_start_addr
+    cdef uintptr_t _buffer_size
+
     def __init__(self, buf, traversal_limit_in_words = None, nesting_limit = None):
         cdef schema_cpp.ReaderOptions opts
         cdef _AlignedBuffer aligned
@@ -3783,9 +3810,19 @@ cdef class _FlatArrayMessageReader(_MessageReader):
             else:
                 self._object_to_pin = buf
 
+        self._buffer_start_addr = ptr
+        self._buffer_size = sz
         self.thisptr = new schema_cpp.FlatArrayMessageReader(
             schema_cpp.WordArrayPtr(<schema_cpp.word*>ptr, sz//8),
             opts)
+
+    property buffer_start_addr:
+        def __get__(self):
+            return <uintptr_t>self._buffer_start_addr
+
+    property buffer_size:
+        def __get__(self):
+            return self._buffer_size
 
     def __dealloc__(self):
         del self.thisptr
@@ -4050,3 +4087,9 @@ def remove_import_hook():
     if _importer is not None:
         _sys.meta_path.remove(_importer)
     _importer = None
+
+"""
+Users of this library can check whether this is present to see if the hooks for
+inspecting struct locations are available.
+"""
+SUPPORTS_INSPECTION = True
