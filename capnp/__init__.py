@@ -33,6 +33,6 @@ Example Usage::
 """
 from .version import version as __version__
 from .lib.capnp import *
-from .lib.capnp import _DynamicStructReader, _DynamicStructBuilder, _DynamicResizableListBuilder, _DynamicListReader, _DynamicListBuilder, _DynamicOrphan, _DynamicResizableListBuilder, _MallocMessageBuilder, _PackedFdMessageReader, _StreamFdMessageReader, _write_message_to_fd, _write_packed_message_to_fd, _StructModule, _InterfaceModule, _DynamicCapabilityClient, _CapabilityClient, _EventLoop
+from .lib.capnp import _DynamicStructReader, _DynamicStructBuilder, _DynamicResizableListBuilder, _DynamicListReader, _DynamicListBuilder, _DynamicOrphan, _DynamicResizableListBuilder, _MallocMessageBuilder, _PackedFdMessageReader, _StreamFdMessageReader, _write_message_to_fd, _write_packed_message_to_fd, _StructModule, _InterfaceModule, _DynamicCapabilityClient, _CapabilityClient, _EventLoop, _DynamicEnum, _Text
 
 add_import_hook() # enable import hook by default

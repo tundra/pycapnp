@@ -36,8 +36,6 @@ cdef class _DynamicStructReader:
     cpdef _has(self, field)
     cpdef _DynamicEnumField _which(self)
     cpdef _which_str(self)
-    cpdef _data_section_addr(self)
-    cpdef _data_section_size(self)
     cpdef _get_by_field(self, _StructSchemaField field)
     cpdef _has_by_field(self, _StructSchemaField field)
 

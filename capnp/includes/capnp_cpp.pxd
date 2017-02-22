@@ -284,7 +284,8 @@ cdef extern from "capnp/dynamic.h" namespace " ::capnp":
             Maybe[StructSchema.Field] which()
             MessageSize totalSize()
             const void *getDataSectionAddr"as< ::capnp::AnyStruct>().getDataSection().begin"()
-            const size_t getDataSectionSize"as< ::capnp::AnyStruct>().getDataSection().size"()
+            size_t getDataSectionSize"as< ::capnp::AnyStruct>().getDataSection().size"()
+            size_t getPointerCount"as< ::capnp::AnyStruct>().getPointerSection().size"()
         cppclass Pipeline:
             Pipeline()
             Pipeline(Pipeline &)

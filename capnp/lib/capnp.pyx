@@ -619,6 +619,13 @@ cdef to_python_reader(C_DynamicValue.Reader self, object parent):
     else:
         raise KjException("Cannot convert type to Python. Type is unhandled by capnproto library")
 
+cdef to_raw_python_reader(C_DynamicValue.Reader self, object parent):
+    cdef int type = self.getType()
+    if type == capnp.TYPE_TEXT:
+        return _Text()._init(self.asText())
+    else:
+        return to_python_reader(self, parent)
+
 cdef to_python_builder(C_DynamicValue.Builder self, object parent):
     cdef int type = self.getType()
     if type == capnp.TYPE_BOOL:
@@ -947,6 +954,24 @@ cdef class _DynamicEnum:
         return hash(self._as_str())
 
 
+cdef class _Text:
+    cdef capnp.StringPtr _str
+    cdef _init(self, capnp.StringPtr str):
+        self._str = str
+        return self
+
+    property start_addr:
+        def __get__(_Text self):
+            return <uintptr_t>self._str.begin()
+
+    property size:
+        def __get__(_Text self):
+            return self._str.size()
+
+    def __str__(self):
+        return (<char*>self._str.begin())[:self._str.size()]
+
+
 cdef class _DynamicEnumField:
     cdef _init(self, proto):
         self.thisptr = proto
@@ -1032,6 +1057,22 @@ cdef class _DynamicStructReader:
         except KjException as e:
             raise e._to_python(), None, _sys.exc_info()[2]
 
+    def get_raw(self, field):
+        """
+        Returns the raw value of the given field. The raw value is only
+        different from the "normal" value in cases where the value is stored as
+        a pointer and converting it to python would convert it to a value that
+        doesn't retain information about the pointer that generated it. So, for
+        instance, strings aren't converted to python strings whereas ints are
+        still returned as ints (because they're not pointers) and structs are
+        still structs because they're pointers that retain information about
+        where they came from.
+        """
+        try:
+            return to_raw_python_reader(self.thisptr.get(field), self)
+        except KjException as e:
+            raise e._to_python(), None, _sys.exc_info()[2]
+
     cpdef _get_by_field(self, _StructSchemaField field):
         return to_python_reader(self.thisptr.getByField(field.thisptr), self)
 
@@ -1080,19 +1121,13 @@ cdef class _DynamicStructReader:
                 self._schema = _StructSchema()._init(self.thisptr.getSchema())
             return self._schema
 
-    cpdef _data_section_addr(self):
-        return <uintptr_t>self.thisptr.getDataSectionAddr()
-
     property data_section_addr:
         """
         Returns the memory address within the buffer where this struct resides
         of the start of the data section.
         """
         def __get__(_DynamicStructReader self):
-            return self._data_section_addr()
-
-    cpdef _data_section_size(self):
-        return self.thisptr.getDataSectionSize()
+            return <uintptr_t>self.thisptr.getDataSectionAddr()
 
     property data_section_size:
         """
@@ -1100,7 +1135,14 @@ cdef class _DynamicStructReader:
         buffer where it resides.
         """
         def __get__(_DynamicStructReader self):
-            return self._data_section_size()
+            return self.thisptr.getDataSectionSize()
+
+    property pointer_count:
+        """
+        Returns the number of pointers stored in this struct.
+        """
+        def __get__(_DynamicStructReader self):
+            return self.thisptr.getPointerCount()
 
     def __dir__(self):
         return list(self.schema.fieldnames)
